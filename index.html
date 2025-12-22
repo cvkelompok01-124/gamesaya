@@ -2,51 +2,107 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Bakti Pelajar</title>
+    <title>Portal Game Bakti Pelajar</title>
     <style>
-        body { text-align: center; font-family: sans-serif; background: #e0e7ff; margin: 0; overflow: hidden; }
+        body { text-align: center; font-family: 'Arial', sans-serif; background: #111827; color: white; margin: 0; overflow: hidden; }
         .screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
         .hidden { display: none !important; }
-        .btn { padding: 15px 40px; font-size: 1.2rem; background: #4f46e5; color: white; border: none; border-radius: 50px; cursor: pointer; }
-        #box { width: 60px; height: 60px; background: red; position: absolute; cursor: pointer; border-radius: 10px; }
+        .btn { padding: 15px 30px; font-size: 1rem; background: #4f46e5; color: white; border: none; border-radius: 10px; cursor: pointer; margin: 10px; transition: 0.2s; }
+        .btn:hover { background: #6366f1; transform: scale(1.05); }
+        .btn-red { background: #ef4444; }
+        
+        /* Game 1: Klik Kotak */
+        #box { width: 60px; height: 60px; background: #22c55e; position: absolute; cursor: pointer; border-radius: 10px; box-shadow: 0 0 20px #22c55e; }
+        
+        /* Game 2: Hindari Bom */
+        #player { width: 50px; height: 50px; background: #3b82f6; position: absolute; border-radius: 50%; border: 3px solid white; transition: 0.1s; }
+        .bomb { width: 40px; height: 40px; background: #f97316; position: absolute; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        #hud { position: absolute; top: 20px; font-size: 22px; width: 100%; display: flex; justify-content: space-around; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <div id="start-screen" class="screen">
-        <h1>Game Bakti Pelajar</h1>
-        <button class="btn" onclick="mulai()">MULAI MAIN</button>
+    <div id="menu-screen" class="screen">
+        <h1 style="color: #818cf8;">🎮 MINI GAME PORTAL</h1>
+        <p>Pilih permainan kamu:</p>
+        <button class="btn" onclick="startKlikGame()">1. KLIK KOTAK CEPAT</button>
+        <button class="btn" onclick="startBomGame()">2. HINDARI BOM</button>
+        <p style="font-size: 0.8rem; color: #6b7280;">Musik tegang akan otomatis aktif saat main</p>
     </div>
 
     <div id="game-screen" class="screen hidden">
-        <div style="position: absolute; top: 20px; font-size: 20px;">
-            Skor: <span id="skorTxt">0</span> | Waktu: <span id="waktuTxt">30</span>
+        <div id="hud">
+            <div>Skor: <span id="skorTxt">0</span></div>
+            <div>Waktu: <span id="waktuTxt">20</span>s</div>
         </div>
-        <div id="box" onclick="klikKotak()"></div>
+        
+        <div id="box" class="hidden" onclick="klikKotak()"></div>
+        
+        <div id="player" class="hidden"></div>
     </div>
 
     <div id="over-screen" class="screen hidden">
-        <h1>Game Over!</h1>
-        <p>Skor Akhir: <span id="skorFinal">0</span></p>
+        <h1 id="statusGameOver">WAKTU HABIS!</h1>
+        <p style="font-size: 1.5rem;">Skor Kamu: <span id="skorFinal">0</span></p>
         <button class="btn" onclick="keMenu()">KE MENU UTAMA</button>
     </div>
 
     <script>
         let skor = 0;
-        let waktu = 30;
+        let waktu = 20;
         let timer;
+        let gameAktif = ""; // "klik" atau "bom"
+        let audioCtx, oscillator;
 
-        function mulai() {
-            skor = 0;
-            waktu = 30;
+        // --- SISTEM MUSIK TENSE (Sintetis) ---
+        function playTenseMusic() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            oscillator = audioCtx.createOscillator();
+            let gainNode = audioCtx.createGain();
+            
+            oscillator.type = 'sawtooth'; 
+            oscillator.frequency.setValueAtTime(100, audioCtx.currentTime); // Suara rendah tegang
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + waktu);
+            
+            gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+        }
+
+        function stopMusic() {
+            if (oscillator) { oscillator.stop(); oscillator.disconnect(); }
+        }
+
+        // --- LOGIKA GAME ---
+        function startKlikGame() {
+            gameAktif = "klik";
+            initGame();
+            document.getElementById('box').classList.remove('hidden');
+            pindahKotak();
+        }
+
+        function startBomGame() {
+            gameAktif = "bom";
+            initGame();
+            document.getElementById('player').classList.remove('hidden');
+            window.onmousemove = (e) => {
+                const p = document.getElementById('player');
+                p.style.left = e.pageX - 25 + 'px';
+                p.style.top = e.pageY - 25 + 'px';
+            };
+            spawnBombs();
+        }
+
+        function initGame() {
+            skor = 0; waktu = 20;
             document.getElementById('skorTxt').innerText = skor;
             document.getElementById('waktuTxt').innerText = waktu;
-            
-            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.add('hidden');
             document.getElementById('over-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
-            
-            pindahKotak();
+            playTenseMusic();
             timer = setInterval(hitungMundur, 1000);
         }
 
@@ -58,24 +114,65 @@
 
         function pindahKotak() {
             const b = document.getElementById('box');
-            b.style.left = Math.random() * (window.innerWidth - 60) + 'px';
-            b.style.top = Math.random() * (window.innerHeight - 100) + 60 + 'px';
+            b.style.left = Math.random() * (window.innerWidth - 70) + 'px';
+            b.style.top = Math.random() * (window.innerHeight - 150) + 100 + 'px';
+        }
+
+        function spawnBombs() {
+            if (gameAktif !== "bom" || waktu <= 0) return;
+            const b = document.createElement('div');
+            b.className = 'bomb';
+            b.innerHTML = '💣';
+            b.style.left = Math.random() * window.innerWidth + 'px';
+            b.style.top = '-50px';
+            document.getElementById('game-screen').appendChild(b);
+
+            let jatuh = setInterval(() => {
+                let top = parseInt(b.style.top);
+                b.style.top = top + 5 + 'px';
+                
+                // Cek Tabrakan
+                const p = document.getElementById('player').getBoundingClientRect();
+                const bombRect = b.getBoundingClientRect();
+                if (bombRect.left < p.right && bombRect.right > p.left && bombRect.top < p.bottom && bombRect.bottom > p.top) {
+                    gameOver("KAMU KENA BOM!");
+                    clearInterval(jatuh);
+                }
+
+                if (top > window.innerHeight) {
+                    clearInterval(jatuh);
+                    b.remove();
+                    if (waktu > 0) { skor++; document.getElementById('skorTxt').innerText = skor; }
+                }
+            }, 20);
+
+            setTimeout(spawnBombs, 500);
         }
 
         function hitungMundur() {
             waktu--;
             document.getElementById('waktuTxt').innerText = waktu;
-            if (waktu <= 0) {
-                clearInterval(timer);
-                document.getElementById('skorFinal').innerText = skor;
-                document.getElementById('game-screen').classList.add('hidden');
-                document.getElementById('over-screen').classList.remove('hidden');
-            }
+            if (waktu <= 0) gameOver("WAKTU HABIS!");
+        }
+
+        function gameOver(pesan) {
+            clearInterval(timer);
+            stopMusic();
+            gameAktif = "";
+            window.onmousemove = null;
+            document.getElementById('statusGameOver').innerText = pesan;
+            document.getElementById('skorFinal').innerText = skor;
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('over-screen').classList.remove('hidden');
+            // Hapus sisa bom
+            document.querySelectorAll('.bomb').forEach(b => b.remove());
+            document.getElementById('box').classList.add('hidden');
+            document.getElementById('player').classList.add('hidden');
         }
 
         function keMenu() {
             document.getElementById('over-screen').classList.add('hidden');
-            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
         }
     </script>
 </body>
