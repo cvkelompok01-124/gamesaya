@@ -59,4 +59,142 @@
         const bgMusic = document.getElementById('bgMusic');
 
         function playMP3() {
-            bgMusic.play().catch(e =>
+            bgMusic.play().catch(e => console.log("Musik butuh klik user dulu"));
+        }
+
+        function stopMP3() {
+            bgMusic.pause();
+            bgMusic.currentTime = 0;
+        }
+
+        function startKlikGame() {
+            resetUI();
+            document.getElementById('box').classList.remove('hidden');
+            pindahKotak();
+            playMP3();
+        }
+
+        function startPS2Bomb() {
+            resetUI();
+            initBoard();
+            window.addEventListener('keydown', handleInput);
+            playMP3();
+        }
+
+        function tambahSkor() {
+            skor++;
+            document.getElementById('skorTxt').innerText = skor;
+            pindahKotak();
+        }
+
+        function initBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            cells = [];
+            for (let y = 0; y < boardSize; y++) {
+                cells[y] = [];
+                for (let x = 0; x < boardSize; x++) {
+                    const div = document.createElement('div');
+                    div.className = 'cell';
+                    if (x === 0 || x === boardSize-1 || y === 0 || y === boardSize-1 || (x%2===0 && y%2===0)) {
+                        div.classList.add('wall');
+                    } else if (Math.random() > 0.7 && !(x<2 && y<2)) {
+                        div.classList.add('brick');
+                    }
+                    board.appendChild(div);
+                    cells[y][x] = div;
+                }
+            }
+            playerPos = { x: 1, y: 1 };
+            renderPlayer();
+        }
+
+        function renderPlayer() {
+            document.querySelectorAll('.player').forEach(p => p.remove());
+            const p = document.createElement('div');
+            p.className = 'player';
+            cells[playerPos.y][playerPos.x].appendChild(p);
+        }
+
+        function handleInput(e) {
+            let next = { x: playerPos.x, y: playerPos.y };
+            if (e.key === 'w' || e.key === 'ArrowUp') next.y--;
+            if (e.key === 's' || e.key === 'ArrowDown') next.y++;
+            if (e.key === 'a' || e.key === 'ArrowLeft') next.x--;
+            if (e.key === 'd' || e.key === 'ArrowRight') next.x++;
+            
+            if (e.code === 'Space') { placeBomb(playerPos.x, playerPos.y); return; }
+
+            if (cells[next.y] && cells[next.y][next.x] && !cells[next.y][next.x].classList.contains('wall') && !cells[next.y][next.x].classList.contains('brick')) {
+                playerPos = next;
+                renderPlayer();
+            }
+        }
+
+        function placeBomb(x, y) {
+            if (cells[y][x].querySelector('.bomb-item')) return;
+            const bomb = document.createElement('div');
+            bomb.className = 'bomb-item';
+            cells[y][x].appendChild(bomb);
+            setTimeout(() => explode(x, y), 2000);
+        }
+
+        function explode(x, y) {
+            const bomb = cells[y][x].querySelector('.bomb-item');
+            if(bomb) bomb.remove();
+            
+            const dirs = [{x:0,y:0}, {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}];
+            dirs.forEach(d => {
+                let ex = x + d.x, ey = y + d.y;
+                if (ey >= 0 && ey < boardSize && ex >= 0 && ex < boardSize) {
+                    const cell = cells[ey][ex];
+                    if (cell.classList.contains('wall')) return;
+                    if (cell.classList.contains('brick')) {
+                        cell.classList.remove('brick');
+                        skor += 10; document.getElementById('skorTxt').innerText = skor;
+                    }
+                    cell.classList.add('explosion');
+                    if(playerPos.x === ex && playerPos.y === ey) gameOver();
+                    setTimeout(() => cell.classList.remove('explosion'), 500);
+                }
+            });
+        }
+
+        function pindahKotak() {
+            const b = document.getElementById('box');
+            b.style.left = Math.random() * (window.innerWidth - 100) + 'px';
+            b.style.top = Math.random() * (window.innerHeight - 200) + 100 + 'px';
+        }
+
+        function resetUI() {
+            skor = 0; document.getElementById('skorTxt').innerText = skor;
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('over-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('game-board').classList.add('hidden');
+            document.getElementById('box').classList.add('hidden');
+            
+            // Cek jika yang dipanggil adalah game bomb
+            if (event.target.innerText.includes("BOMB")) {
+                document.getElementById('game-board').classList.remove('hidden');
+            }
+        }
+
+        function gameOver() {
+            stopMP3();
+            window.removeEventListener('keydown', handleInput);
+            document.getElementById('skorFinal').innerText = skor;
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('over-screen').classList.remove('hidden');
+        }
+
+        function keMenu() {
+            stopMP3();
+            window.removeEventListener('keydown', handleInput);
+            document.getElementById('over-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('menu-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
