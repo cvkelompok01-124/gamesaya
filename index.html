@@ -10,7 +10,6 @@
         .btn { padding: 15px 30px; font-size: 1rem; background: #1a1a1a; color: #0f0; border: 2px solid #0f0; border-radius: 5px; cursor: pointer; margin: 10px; text-transform: uppercase; }
         .btn:hover { background: #0f0; color: #000; }
         
-        /* PS2 BOMBER STYLE */
         #game-board { 
             display: grid; 
             grid-template-columns: repeat(11, 40px); 
@@ -19,8 +18,8 @@
             margin-top: 20px;
         }
         .cell { width: 40px; height: 40px; background: #333; position: relative; }
-        .wall { background: #666; box-shadow: inset 0 0 10px #000; } /* Tembok permanen */
-        .brick { background: #8b4513; border-radius: 3px; } /* Tembok bisa hancur */
+        .wall { background: #666; box-shadow: inset 0 0 10px #000; }
+        .brick { background: #8b4513; border-radius: 3px; }
         .player { background: #00f; border-radius: 50%; width: 30px; height: 30px; margin: 5px; position: absolute; z-index: 5; border: 2px solid #fff; }
         .bomb-item { background: #000; border-radius: 50%; width: 30px; height: 30px; margin: 5px; animation: pulse 0.5s infinite; border: 2px solid red; }
         .explosion { background: #ff4500; box-shadow: 0 0 20px #ff4500; z-index: 10; }
@@ -30,6 +29,8 @@
     </style>
 </head>
 <body>
+
+    <audio id="bgMusic" src="musik.mp3" loop></audio>
 
     <div id="menu-screen" class="screen">
         <h1 style="font-size: 3rem;">PS2 MINI PORTAL</h1>
@@ -41,7 +42,7 @@
     <div id="game-screen" class="screen hidden">
         <div id="hud">SKOR: <span id="skorTxt">0</span> | <button class="btn" style="padding: 5px 10px;" onclick="keMenu()">EXIT</button></div>
         <div id="game-board"></div>
-        <div id="box" class="hidden" onclick="skor++; updateSkor(); pindahKotak()" style="width:60px; height:60px; background:red; position:absolute; cursor:pointer;"></div>
+        <div id="box" class="hidden" onclick="tambahSkor()" style="width:60px; height:60px; background:red; position:absolute; cursor:pointer;"></div>
     </div>
 
     <div id="over-screen" class="screen hidden">
@@ -52,143 +53,10 @@
 
     <script>
         let skor = 0;
-        let gameActive = false;
         let playerPos = { x: 1, y: 1 };
         const boardSize = 11;
         let cells = [];
+        const bgMusic = document.getElementById('bgMusic');
 
-        // --- MUSIK ---
-        let audioCtx, osc;
-        function playMusic() {
-            if(!audioCtx) audioCtx = new AudioContext();
-            osc = audioCtx.createOscillator();
-            let g = audioCtx.createGain();
-            osc.type = 'square';
-            osc.frequency.value = 80;
-            g.gain.value = 0.05;
-            osc.connect(g); g.connect(audioCtx.destination);
-            osc.start();
-        }
-
-        function startKlikGame() {
-            resetUI();
-            document.getElementById('box').classList.remove('hidden');
-            pindahKotak();
-            playMusic();
-        }
-
-        function startPS2Bomb() {
-            resetUI();
-            initBoard();
-            window.addEventListener('keydown', handleInput);
-            playMusic();
-        }
-
-        function initBoard() {
-            const board = document.getElementById('game-board');
-            board.innerHTML = '';
-            cells = [];
-            for (let y = 0; y < boardSize; y++) {
-                cells[y] = [];
-                for (let x = 0; x < boardSize; x++) {
-                    const div = document.createElement('div');
-                    div.className = 'cell';
-                    if (x === 0 || x === boardSize-1 || y === 0 || y === boardSize-1 || (x%2===0 && y%2===0)) {
-                        div.classList.add('wall');
-                    } else if (Math.random() > 0.7 && !(x<3 && y<3)) {
-                        div.classList.add('brick');
-                    }
-                    board.appendChild(div);
-                    cells[y][x] = div;
-                }
-            }
-            playerPos = { x: 1, y: 1 };
-            renderPlayer();
-        }
-
-        function renderPlayer() {
-            document.querySelectorAll('.player').forEach(p => p.remove());
-            const p = document.createElement('div');
-            p.className = 'player';
-            cells[playerPos.y][playerPos.x].appendChild(p);
-        }
-
-        function handleInput(e) {
-            let next = { x: playerPos.x, y: playerPos.y };
-            if (e.key === 'w' || e.key === 'ArrowUp') next.y--;
-            if (e.key === 's' || e.key === 'ArrowDown') next.y++;
-            if (e.key === 'a' || e.key === 'ArrowLeft') next.x--;
-            if (e.key === 'd' || e.key === 'ArrowRight') next.x++;
-            
-            if (e.code === 'Space') { placeBomb(playerPos.x, playerPos.y); return; }
-
-            if (!cells[next.y][next.x].classList.contains('wall') && !cells[next.y][next.x].classList.contains('brick')) {
-                playerPos = next;
-                renderPlayer();
-            }
-        }
-
-        function placeBomb(x, y) {
-            if (cells[y][x].querySelector('.bomb-item')) return;
-            const bomb = document.createElement('div');
-            bomb.className = 'bomb-item';
-            cells[y][x].appendChild(bomb);
-            setTimeout(() => explode(x, y), 2000);
-        }
-
-        function explode(x, y) {
-            const bomb = cells[y][x].querySelector('.bomb-item');
-            if(bomb) bomb.remove();
-            
-            const dirs = [{x:0,y:0}, {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}];
-            dirs.forEach(d => {
-                let ex = x + d.x, ey = y + d.y;
-                if (ex >= 0 && ex < boardSize && ey >= 0 && ey < boardSize) {
-                    if (cells[ey][ex].classList.contains('wall')) return;
-                    if (cells[ey][ex].classList.contains('brick')) {
-                        cells[ey][ex].classList.remove('brick');
-                        skor += 10; updateSkor();
-                    }
-                    cells[ey][ex].classList.add('explosion');
-                    if(playerPos.x === ex && playerPos.y === ey) gameOver();
-                    setTimeout(() => cells[ey][ex].classList.remove('explosion'), 500);
-                }
-            });
-        }
-
-        function pindahKotak() {
-            const b = document.getElementById('box');
-            b.style.left = Math.random() * (window.innerWidth - 100) + 'px';
-            b.style.top = Math.random() * (window.innerHeight - 200) + 100 + 'px';
-        }
-
-        function resetUI() {
-            skor = 0; updateSkor();
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('over-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('game-board').classList.add('hidden');
-            document.getElementById('box').classList.add('hidden');
-            if (arguments.callee.caller.name === "startPS2Bomb") document.getElementById('game-board').classList.remove('hidden');
-        }
-
-        function updateSkor() { document.getElementById('skorTxt').innerText = skor; }
-
-        function gameOver() {
-            if(osc) { osc.stop(); osc.disconnect(); }
-            window.removeEventListener('keydown', handleInput);
-            document.getElementById('skorFinal').innerText = skor;
-            document.getElementById('game-screen').classList.add('hidden');
-            document.getElementById('over-screen').classList.remove('hidden');
-        }
-
-        function keMenu() {
-            if(osc) { try { osc.stop(); } catch(e) {} }
-            window.removeEventListener('keydown', handleInput);
-            document.getElementById('over-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-        }
-    </script>
-</body>
-</html>
+        function playMP3() {
+            bgMusic.play().catch(e =>
