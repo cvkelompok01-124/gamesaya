@@ -1,200 +1,49 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PS2 Style Bomb Portal</title>
-    <style>
-        body { text-align: center; font-family: 'Courier New', Courier, monospace; background: #000; color: #0f0; margin: 0; overflow: hidden; }
-        .screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        .hidden { display: none !important; }
-        .btn { padding: 15px 30px; font-size: 1rem; background: #1a1a1a; color: #0f0; border: 2px solid #0f0; border-radius: 5px; cursor: pointer; margin: 10px; text-transform: uppercase; }
-        .btn:hover { background: #0f0; color: #000; }
-        
-        #game-board { 
-            display: grid; 
-            grid-template-columns: repeat(11, 40px); 
-            grid-template-rows: repeat(11, 40px); 
-            gap: 2px; background: #222; border: 4px solid #444; 
-            margin-top: 20px;
-        }
-        .cell { width: 40px; height: 40px; background: #333; position: relative; }
-        .wall { background: #666; box-shadow: inset 0 0 10px #000; }
-        .brick { background: #8b4513; border-radius: 3px; }
-        .player { background: #00f; border-radius: 50%; width: 30px; height: 30px; margin: 5px; position: absolute; z-index: 5; border: 2px solid #fff; }
-        .bomb-item { background: #000; border-radius: 50%; width: 30px; height: 30px; margin: 5px; animation: pulse 0.5s infinite; border: 2px solid red; }
-        .explosion { background: #ff4500; box-shadow: 0 0 20px #ff4500; z-index: 10; }
-        
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
-        #hud { font-size: 20px; margin-bottom: 10px; }
-    </style>
+    <title>CV Saya - Software Engineer</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>NAMA ANDA</h1>
+            <p>Full-stack Developer | Open Source Enthusiast</p>
+            <div class="contact">
+                <span>📧 email@kamu.com</span> | 
+                <span>🔗 linkedin.com/in/username</span> | 
+                <span>💻 github.com/username</span>
+            </div>
+        </header>
 
-    <audio id="bgMusic" src="musik.mp3" loop></audio>
+        <section>
+            <h2>Profil Profesional</h2>
+            <p>Developer yang berfokus pada efisiensi kode dan pengalaman pengguna. Berpengalaman dalam membangun aplikasi web menggunakan teknologi modern.</p>
+        </section>
 
-    <div id="menu-screen" class="screen">
-        <h1 style="font-size: 3rem;">PS2 MINI PORTAL</h1>
-        <button class="btn" onclick="startKlikGame()">1. KLIK CEPAT (MOUSE)</button>
-        <button class="btn" onclick="startPS2Bomb()">2. PS2 BOMB (KEYBOARD)</button>
-        <p>Kontrol Bomb: WASD + SPASI</p>
+        <section>
+            <h2>Keahlian Utama</h2>
+            <div class="skills">
+                <span>HTML/CSS</span>
+                <span>JavaScript</span>
+                <span>React.js</span>
+                <span>Node.js</span>
+            </div>
+        </section>
+
+        <section>
+            <h2>Pengalaman Kerja</h2>
+            <div class="item">
+                <h3>Senior Developer - Tech Corp</h3>
+                <span class="date">2022 - Sekarang</span>
+                <ul>
+                    <li>Memimpin tim pengembangan untuk aplikasi e-commerce.</li>
+                    <li>Mengoptimalkan performa website sebesar 40%.</li>
+                </ul>
+            </div>
+        </section>
     </div>
-
-    <div id="game-screen" class="screen hidden">
-        <div id="hud">SKOR: <span id="skorTxt">0</span> | <button class="btn" style="padding: 5px 10px;" onclick="keMenu()">EXIT</button></div>
-        <div id="game-board"></div>
-        <div id="box" class="hidden" onclick="tambahSkor()" style="width:60px; height:60px; background:red; position:absolute; cursor:pointer;"></div>
-    </div>
-
-    <div id="over-screen" class="screen hidden">
-        <h1>MISSION FAILED</h1>
-        <p>SKOR AKHIR: <span id="skorFinal">0</span></p>
-        <button class="btn" onclick="keMenu()">RETRY</button>
-    </div>
-
-    <script>
-        let skor = 0;
-        let playerPos = { x: 1, y: 1 };
-        const boardSize = 11;
-        let cells = [];
-        const bgMusic = document.getElementById('bgMusic');
-
-        function playMP3() {
-            bgMusic.play().catch(e => console.log("Musik butuh klik user dulu"));
-        }
-
-        function stopMP3() {
-            bgMusic.pause();
-            bgMusic.currentTime = 0;
-        }
-
-        function startKlikGame() {
-            resetUI();
-            document.getElementById('box').classList.remove('hidden');
-            pindahKotak();
-            playMP3();
-        }
-
-        function startPS2Bomb() {
-            resetUI();
-            initBoard();
-            window.addEventListener('keydown', handleInput);
-            playMP3();
-        }
-
-        function tambahSkor() {
-            skor++;
-            document.getElementById('skorTxt').innerText = skor;
-            pindahKotak();
-        }
-
-        function initBoard() {
-            const board = document.getElementById('game-board');
-            board.innerHTML = '';
-            cells = [];
-            for (let y = 0; y < boardSize; y++) {
-                cells[y] = [];
-                for (let x = 0; x < boardSize; x++) {
-                    const div = document.createElement('div');
-                    div.className = 'cell';
-                    if (x === 0 || x === boardSize-1 || y === 0 || y === boardSize-1 || (x%2===0 && y%2===0)) {
-                        div.classList.add('wall');
-                    } else if (Math.random() > 0.7 && !(x<2 && y<2)) {
-                        div.classList.add('brick');
-                    }
-                    board.appendChild(div);
-                    cells[y][x] = div;
-                }
-            }
-            playerPos = { x: 1, y: 1 };
-            renderPlayer();
-        }
-
-        function renderPlayer() {
-            document.querySelectorAll('.player').forEach(p => p.remove());
-            const p = document.createElement('div');
-            p.className = 'player';
-            cells[playerPos.y][playerPos.x].appendChild(p);
-        }
-
-        function handleInput(e) {
-            let next = { x: playerPos.x, y: playerPos.y };
-            if (e.key === 'w' || e.key === 'ArrowUp') next.y--;
-            if (e.key === 's' || e.key === 'ArrowDown') next.y++;
-            if (e.key === 'a' || e.key === 'ArrowLeft') next.x--;
-            if (e.key === 'd' || e.key === 'ArrowRight') next.x++;
-            
-            if (e.code === 'Space') { placeBomb(playerPos.x, playerPos.y); return; }
-
-            if (cells[next.y] && cells[next.y][next.x] && !cells[next.y][next.x].classList.contains('wall') && !cells[next.y][next.x].classList.contains('brick')) {
-                playerPos = next;
-                renderPlayer();
-            }
-        }
-
-        function placeBomb(x, y) {
-            if (cells[y][x].querySelector('.bomb-item')) return;
-            const bomb = document.createElement('div');
-            bomb.className = 'bomb-item';
-            cells[y][x].appendChild(bomb);
-            setTimeout(() => explode(x, y), 2000);
-        }
-
-        function explode(x, y) {
-            const bomb = cells[y][x].querySelector('.bomb-item');
-            if(bomb) bomb.remove();
-            
-            const dirs = [{x:0,y:0}, {x:1,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:0,y:-1}];
-            dirs.forEach(d => {
-                let ex = x + d.x, ey = y + d.y;
-                if (ey >= 0 && ey < boardSize && ex >= 0 && ex < boardSize) {
-                    const cell = cells[ey][ex];
-                    if (cell.classList.contains('wall')) return;
-                    if (cell.classList.contains('brick')) {
-                        cell.classList.remove('brick');
-                        skor += 10; document.getElementById('skorTxt').innerText = skor;
-                    }
-                    cell.classList.add('explosion');
-                    if(playerPos.x === ex && playerPos.y === ey) gameOver();
-                    setTimeout(() => cell.classList.remove('explosion'), 500);
-                }
-            });
-        }
-
-        function pindahKotak() {
-            const b = document.getElementById('box');
-            b.style.left = Math.random() * (window.innerWidth - 100) + 'px';
-            b.style.top = Math.random() * (window.innerHeight - 200) + 100 + 'px';
-        }
-
-        function resetUI() {
-            skor = 0; document.getElementById('skorTxt').innerText = skor;
-            document.getElementById('menu-screen').classList.add('hidden');
-            document.getElementById('over-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('game-board').classList.add('hidden');
-            document.getElementById('box').classList.add('hidden');
-            
-            // Cek jika yang dipanggil adalah game bomb
-            if (event.target.innerText.includes("BOMB")) {
-                document.getElementById('game-board').classList.remove('hidden');
-            }
-        }
-
-        function gameOver() {
-            stopMP3();
-            window.removeEventListener('keydown', handleInput);
-            document.getElementById('skorFinal').innerText = skor;
-            document.getElementById('game-screen').classList.add('hidden');
-            document.getElementById('over-screen').classList.remove('hidden');
-        }
-
-        function keMenu() {
-            stopMP3();
-            window.removeEventListener('keydown', handleInput);
-            document.getElementById('over-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.add('hidden');
-            document.getElementById('menu-screen').classList.remove('hidden');
-        }
-    </script>
 </body>
 </html>
